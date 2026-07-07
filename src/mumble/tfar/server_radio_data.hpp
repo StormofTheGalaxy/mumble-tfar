@@ -1,4 +1,5 @@
 #pragma once
+#include <vector>
 #include <unordered_map>
 #include <functional>
 #include "Locks.hpp"
@@ -32,12 +33,18 @@ class ClientDataMap : public std::unordered_map<std::string, std::shared_ptr<CLI
 public:
     using Base::Base;
 
-    std::shared_ptr<CLIENT_DATA> getClientDataByClientID(TSClientID clientID) const {
+    std::vector<std::shared_ptr<CLIENT_DATA>> getClientDataByClientID(TSClientID clientID) const {
+        std::vector<std::shared_ptr<CLIENT_DATA>> result;
+
         for (const auto& entry : *this) {
             const auto& client = entry.second;
             if (client && client->clientId == clientID) {
-                return client;
+                result.push_back(client);
             }
+        }
+
+        return result;
+    }
         }
 
         return nullptr;
