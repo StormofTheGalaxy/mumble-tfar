@@ -1,5 +1,5 @@
 #pragma once
-#include "client_data.hpp"
+#include "clientData.hpp"
 #include <Windows.h>
 extern CRITICAL_SECTION serverDataCriticalSection;
 struct FREQ_SETTINGS {
