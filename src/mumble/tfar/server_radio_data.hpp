@@ -25,6 +25,25 @@ struct SPEAKER_DATA {
 	float waveZ;
 };
 
+
+class ClientDataMap : public std::unordered_map<std::string, std::shared_ptr<CLIENT_DATA>> {
+    using Base = std::unordered_map<std::string, std::shared_ptr<CLIENT_DATA>>;
+
+public:
+    using Base::Base;
+
+    std::shared_ptr<CLIENT_DATA> getClientDataByClientID(TSClientID clientID) const {
+        for (const auto& entry : *this) {
+            const auto& client = entry.second;
+            if (client && client->clientId == clientID) {
+                return client;
+            }
+        }
+
+        return nullptr;
+    }
+};
+
 struct SERVER_RADIO_DATA {
 	std::string getMyNickname() const { return myNickname; }
 	void setMyNicknamex(std::string val) {//#TODO remove x
@@ -48,7 +67,7 @@ struct SERVER_RADIO_DATA {
 	}
 	bool tangentPressed;
 	TS3_VECTOR myPosition;
-    std::unordered_map<std::string, std::shared_ptr<CLIENT_DATA>> nicknameToClientData;
+    ClientDataMap nicknameToClientData;
 #ifndef unmuteAllClients
 	std::vector<anyID> mutedClients; //Access is guarded by serverDataCriticalSection 
 	void sortMutedClients() {

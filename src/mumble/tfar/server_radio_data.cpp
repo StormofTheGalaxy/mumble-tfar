@@ -4,22 +4,6 @@
 #include <memory>
 
 
-namespace {
-template <class Map>
-std::shared_ptr<CLIENT_DATA> tfarLookupClientDataByClientID(const Map& clients, TSClientID clientID) {
-    for (const auto& entry : clients) {
-        const auto& client = entry.second;
-        if (client && client->clientId == clientID) {
-            return client;
-        }
-    }
-
-    return nullptr;
-}
-} // namespace
-
-
-
 void SERVER_RADIO_DATA::setFreqInfos(const std::vector<std::string>& tokens) {
 	LockGuard_exclusive<CriticalSectionLock> lock(serverDataCriticalSection);
 	mySwFrequencies = helpers::parseFrequencies(tokens[1]);
@@ -70,7 +54,7 @@ void SERVER_ID_TO_SERVER_DATA::resetAndSetMyNickname(uint64_t const& serverConne
 
 std::vector<std::shared_ptr<CLIENT_DATA>> SERVER_ID_TO_SERVER_DATA::getClientDataByClientID(uint64_t const& serverConnectionHandlerID, anyID clientID) {
 	LockGuard_exclusive<CriticalSectionLock> lock(serverDataCriticalSection);
-	return data[serverConnectionHandlerID].tfarLookupClientDataByClientID(nicknameToClientData, clientID);
+	return data[serverConnectionHandlerID].nicknameToClientData.getClientDataByClientID(clientID);
 }
 
 float SERVER_ID_TO_SERVER_DATA::getWavesLevel(uint64_t const& serverConnectionHandlerID) {
