@@ -10,6 +10,7 @@
 #include "Locks.hpp"
 #include "antennaManager.h"
 #include <set>
+#include <string_view>
 
 enum class sendingRadioType {   //Receiving FROM senders Radio.
     LISTEN_TO_SW,
@@ -249,6 +250,8 @@ private:
 class clientData { //enable_shared_from_this doesn't work.. don't ask me
 public:
 
+    static std::string convertNickname(std::string_view nickname);
+
 
     explicit clientData(TSClientID _clientID) : clientId(_clientID) {
 
@@ -371,3 +374,4 @@ private:
     }
 };
 
+using CLIENT_DATA = clientData;

@@ -1,6 +1,10 @@
 #pragma once
+#include <map>
+#include <memory>
+#include <string>
 #include "clientData.hpp"
 #include <Windows.h>
+
 extern CRITICAL_SECTION serverDataCriticalSection;
 struct FREQ_SETTINGS {
 	int volume;
