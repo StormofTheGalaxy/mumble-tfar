@@ -216,7 +216,11 @@ class Signer:
 		for plugin in os.listdir(pluginsDir):
 			plugins.append(os.path.join(pluginsDir, plugin))
 
-		self.codesign(binaries)
+		# The executables need the entitlements (most importantly
+		# com.apple.security.device.audio-input): when signed with the hardened
+		# runtime but without that entitlement, macOS silently denies microphone
+		# capture without ever showing the permission prompt.
+		self.codesign(binaries, entitlements)
 		self.codesign(codecs)
 		self.codesign(plugins)
 
@@ -266,9 +270,12 @@ class Signer:
 		Signer.cmd(['pkgutil', '--flatten-full', workDir, file])
 
 def main():
+	defaultEntitlements = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+									   '..', 'src', 'mumble', 'mumble.entitlements.plist')
+
 	p = argparse.ArgumentParser(usage='sign_macOS.py --input=<in.dmg> --output=<out.dmg> [--keep-tree]')
 	p.add_argument('-c', '--config', help = 'Configuration file', default = os.path.join(pathlib.Path.home(), '.sign_macOS.cfg'))
-	p.add_argument('-e', '--entitlements', help = 'Entitlements file')
+	p.add_argument('-e', '--entitlements', help = 'Entitlements file', default = os.path.normpath(defaultEntitlements))
 	p.add_argument('-i', '--input', help = 'Input file')
 	p.add_argument('-o', '--output', help = 'Output file')
 	p.add_argument('-kt', '--keep-tree', action = 'store_true', dest = 'keepTree',

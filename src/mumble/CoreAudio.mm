@@ -511,12 +511,21 @@ bool CoreAudioInputRegistrar::isMicrophoneAccessDeniedByOS() {
 				// The app hasn't yet asked the user for microphone access.
 				qWarning("CoreAudioInput: Mumble hasn't asked the user for microphone access. Asking for it now.");
 				[AVCaptureDevice requestAccessForMediaType:AVMediaTypeAudio completionHandler: ^(BOOL _granted) {
-					if (_granted) {
-						Audio::stopInput();
-						Audio::startInput();
-					} else {
-						qWarning("CoreAudioInput: Microphone access denied by user.");
-					}
+					// This completion handler is invoked on an arbitrary AVFoundation
+					// dispatch queue, but the audio backends must be (re)started from
+					// the main thread (see the comments in Audio::stopInput()).
+					dispatch_async(dispatch_get_main_queue(), ^{
+						if (_granted) {
+							qWarning("CoreAudioInput: Microphone access granted by user. Restarting AudioInput.");
+							Audio::stopInput();
+							Audio::startInput();
+						} else {
+							qWarning("CoreAudioInput: Microphone access denied by user.");
+							Global::get().mw->msgBox(QObject::tr("Access to the microphone was denied. Please allow Mumble to use "
+							                         "the microphone by changing the settings in System Settings -> Privacy & "
+							                         "Security -> Microphone."));
+						}
+					});
 				}];
 				return true;
 			}
@@ -524,7 +533,7 @@ bool CoreAudioInputRegistrar::isMicrophoneAccessDeniedByOS() {
 				// The user has previously denied access.
 				qWarning("CoreAudioInput: Microphone access has been previously denied by user.");
 				Global::get().mw->msgBox(QObject::tr("Access to the microphone was denied. Please allow Mumble to use the microphone "
-				                         "by changing the settings in System Preferences -> Security & Privacy -> Privacy -> "
+				                         "by changing the settings in System Settings -> Privacy & Security -> "
 				                         "Microphone."));
 				return true;
 			}

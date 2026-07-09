@@ -392,6 +392,16 @@ elseif(APPLE)
 			MACOSX_BUNDLE TRUE
 			MACOSX_BUNDLE_INFO_PLIST ${MUMBLE_PLIST}
 	)
+
+	# Re-sign the bundle (ad-hoc) with our entitlements so that the microphone
+	# entitlement (com.apple.security.device.audio-input) is part of the code
+	# signature. Without it, macOS silently delivers no audio from the capture
+	# device once the binary is signed with the hardened runtime, and TCC never
+	# shows the permission prompt.
+	add_custom_command(TARGET mumble POST_BUILD
+		COMMAND codesign --force --sign - --entitlements "${CMAKE_CURRENT_SOURCE_DIR}/mumble.entitlements.plist" "$<TARGET_BUNDLE_DIR:mumble>"
+		COMMENT "Ad-hoc signing Mumble.app with microphone entitlements"
+	)
 endif()
 
 add_custom_command(

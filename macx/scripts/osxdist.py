@@ -46,7 +46,11 @@ def lookup_file_identifier(path):
 	except:
 		return os.path.basename(path)
 
-def codesign(path):
+def entitlements_file():
+	'''Path to the entitlements used for the Mumble client app.'''
+	return os.path.join(options.source_dir, 'src', 'mumble', 'mumble.entitlements.plist')
+
+def codesign(path, entitlements=None):
 	'''Call the codesign executable on the signable object at path.'''
 
 	certname = 'Developer ID Application: %s' % options.developer_id
@@ -63,11 +67,26 @@ def codesign(path):
 				'identifier': identifier,
 				'subject_OU': OU,
 			})
-		p = Popen(('codesign', '--keychain', options.keychain, '-vvvv', '-i', identifier, '-r='+reqs, '-s', certname, p))
+		args = ['codesign', '--keychain', options.keychain, '-vvvv', '--force', '-i', identifier, '-r='+reqs, '-s', certname]
+		if entitlements:
+			# The microphone entitlement (com.apple.security.device.audio-input)
+			# must be part of the signature: a hardened-runtime signature without
+			# it makes macOS silently deliver no audio from the microphone.
+			args += ['--options', 'runtime', '--entitlements', entitlements]
+		p = Popen(tuple(args) + (p,))
 		retval = p.wait()
 		if retval != 0:
 			return retval
 	return 0
+
+def adhoc_codesign(path, entitlements=None):
+	'''Ad-hoc sign the signable object at path (no Developer ID required).'''
+
+	args = ['codesign', '--force', '--sign', '-']
+	if entitlements:
+		args += ['--entitlements', entitlements]
+	p = Popen(args + [path])
+	return p.wait()
 
 def prodsign(inf, outf):
 	'''Call the prodsign executable.'''
@@ -298,8 +317,9 @@ def package_client():
 	# Sign our binaries, etc.
 	if options.developer_id:
 		print(' * Signing binaries with Developer ID `%s\'' % options.developer_id)
+		# Nested code must be signed before the enclosing app bundle,
+		# otherwise the bundle's resource seal is invalidated again.
 		binaries = (
-			os.path.join(options.binary_dir, 'Mumble.app'),
 			os.path.join(options.binary_dir, 'Mumble.app/Contents/Plugins/liblink.dylib'),
 			os.path.join(options.binary_dir, 'Mumble.app/Contents/Plugins/libmanual.dylib'),
 			os.path.join(options.binary_dir, 'Mumble.app/Contents/Codecs/libcelt0.0.7.0.dylib'),
@@ -308,6 +328,14 @@ def package_client():
 		)
 		availableBinaries = [bin for bin in binaries if os.path.exists(bin)]
 		codesign(availableBinaries)
+		codesign(os.path.join(options.binary_dir, 'Mumble.app'), entitlements=entitlements_file())
+		print()
+	else:
+		# Modifying Info.plist above broke the build-time (ad-hoc) signature seal.
+		# Re-sign ad-hoc so the bundle stays launchable (mandatory on Apple Silicon)
+		# and keeps the microphone entitlement in its signature.
+		print(' * Ad-hoc signing app bundle (no Developer ID given)')
+		adhoc_codesign(os.path.join(options.binary_dir, 'Mumble.app'), entitlements=entitlements_file())
 		print()
 
 	if options.only_appbundle:
