@@ -210,6 +210,7 @@ void VersionCheck::onInstallerDownloaded() {
 	// puts the new binary in the same place.
 	const QString installerPath = QDir::toNativeSeparators(filePath);
 	const QString clientPath    = QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
+	const QString logPath = QDir::toNativeSeparators(QDir::temp().absoluteFilePath(QLatin1String("storm-voice-update.log")));
 
 	QString script;
 	script += QLatin1String("@echo off\r\n");
@@ -217,11 +218,15 @@ void VersionCheck::onInstallerDownloaded() {
 	// Give the client a moment to shut down and release its files. ping is
 	// used as the delay because timeout refuses to run without console input.
 	script += QLatin1String("ping -n 4 127.0.0.1 >nul\r\n");
+	// The installer log is kept in the temp directory so failed updates can
+	// be diagnosed after the fact.
 	if (m_assetName.endsWith(QLatin1String(".msi"))) {
-		script += QString::fromLatin1("msiexec /i \"%1\" /passive /norestart\r\n").arg(installerPath);
+		script += QString::fromLatin1("msiexec /i \"%1\" /passive /norestart /l*v \"%2\"\r\n").arg(installerPath, logPath);
 	} else {
-		script += QString::fromLatin1("\"%1\" /passive /norestart\r\n").arg(installerPath);
+		script += QString::fromLatin1("\"%1\" /passive /norestart /log \"%2\"\r\n").arg(installerPath, logPath);
 	}
+	// Restart the client even if the installer failed — the old binary is
+	// still in place then, and the client will offer the update again.
 	script += QString::fromLatin1("if exist \"%1\" start \"\" \"%1\"\r\n").arg(clientPath);
 
 	const QString scriptPath = QDir::temp().absoluteFilePath(QLatin1String("storm-voice-update.cmd"));
